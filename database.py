@@ -18,6 +18,7 @@ def create_connection():
 
 def check_login(username, password):
     conn = create_connection()
+    cursor = None
     if conn:
         try:
             cursor = conn.cursor(dictionary = True)
@@ -34,7 +35,8 @@ def check_login(username, password):
             print(f"Error: {e}")
         finally:
             if conn.is_connected():
-                cursor.close()
+                if cursor:
+                    cursor.close()
                 conn.close()
     return False, None, None
                 
