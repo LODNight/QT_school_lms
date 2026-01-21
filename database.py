@@ -40,4 +40,24 @@ def check_login(username, password):
                 conn.close()
     return False, None, None
                 
-    
+def get_all_students():
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            querry = """
+                SELECT s.student_id, s.full_name, s.dob, s.gender, c.class_name
+                FROM students s
+                LEFT JOIN classes c ON c.class_id = s.class_id 
+            """
+            cursor.execute(querry) 
+            result = cursor.fetchall() # Lấy về list các tuple
+            return result
+        except Error as e:
+            print(f"Error: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return []
