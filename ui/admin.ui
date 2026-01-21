@@ -63,21 +63,21 @@
        <item>
         <widget class="QPushButton" name="btnHome">
          <property name="text">
-          <string>Home</string>
+          <string>Trang chủ</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btnStudent">
          <property name="text">
-          <string>Students</string>
+          <string>Học viên</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btnScore">
          <property name="text">
-          <string>Scores</string>
+          <string>Điểm số</string>
          </property>
         </widget>
        </item>
@@ -97,7 +97,7 @@
        <item>
         <widget class="QPushButton" name="btnLogout">
          <property name="text">
-          <string>Logout</string>
+          <string>Đăng xuất</string>
          </property>
         </widget>
        </item>
@@ -165,23 +165,23 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <item>
-               <widget class="QPushButton" name="btnAdd">
+               <widget class="QPushButton" name="btnAddStudent">
                 <property name="text">
-                 <string>Add</string>
+                 <string>Thêm</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="btnEdit">
+               <widget class="QPushButton" name="btnEditStudent">
                 <property name="text">
-                 <string>Edit</string>
+                 <string>Sửa</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="btnDelete">
+               <widget class="QPushButton" name="btnDeleteStudent">
                 <property name="text">
-                 <string>Delete</string>
+                 <string>Xóa</string>
                 </property>
                </widget>
               </item>

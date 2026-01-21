@@ -39,7 +39,9 @@ def check_login(username, password):
                     cursor.close()
                 conn.close()
     return False, None, None
-                
+
+
+# Get Student         
 def get_all_students():
     conn = create_connection()
     if conn:
@@ -61,3 +63,48 @@ def get_all_students():
                     cursor.close()
                 conn.close()
     return []
+
+# Add Student 
+def add_students(student_id, full_name, dob, gender, class_id):
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            querry = """
+                INSERT INTO students (student_id, full_name, dob, gender, class_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """
+            cursor.execute(querry, (student_id, full_name, dob, gender, class_id))
+            conn.commit()
+            return True
+        except Error as e:
+            print(f"Error: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return False
+
+# Classes 
+def get_all_classes():
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            querry = """
+                SELECT class_id, class_name 
+                FROM classes
+                """
+            cursor.execute(querry) 
+            result = cursor.fetchall() # Lấy về list các tuple
+            return result
+        except Error as e:
+            print(f"Error: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return []
+

@@ -2,6 +2,7 @@
 from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem
 from database import get_all_students
 from PyQt6.uic import loadUi 
+from windows.student_window import StudentDialog
 
 class AdminWindow(QMainWindow):
     def __init__(self):
@@ -10,15 +11,24 @@ class AdminWindow(QMainWindow):
 
 
         self.btnHome.clicked.connect(lambda: self.mainStack.setCurrentIndex(0))
-        self.btnStudent.clicked.connect(lambda: self.mainStack.setCurrentIndex(1))
+        self.btnStudent.clicked.connect(self.show_student_page)
         self.btnScore.clicked.connect(lambda: self.mainStack.setCurrentIndex(2))
         self.btnLogout.clicked.connect(self.handle_logout)
+
+        self.btnAddStudent.clicked.connect(self.add_dialog)
 
         # Setup Bảng (Table)
         self.setup_table()
 
         # Load data ngay khi mở
         self.load_data()
+
+    def add_dialog(self):
+        self.student_dialog = StudentDialog()
+        # exec() sẽ dừng màn hình chính lại chờ Dialog đóng
+        if self.student_dialog.exec():
+            # Nếu người dùng bấm Lưu (accept) thì load lại bảng
+            self.load_data()
 
     def show_student_page(self):
         self.mainStack.setCurrentIndex(1)   # Chuyển sang trang Student
