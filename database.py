@@ -86,6 +86,58 @@ def add_students(student_id, full_name, dob, gender, class_id):
                 conn.close()
     return False
 
+# Update Student
+def update_student(student_id, full_name, dob, gender, class_id):
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+
+            # Câu lệnh Querry
+            querry = """
+                UPDATE students
+                SET full_name = %s, dob = %s, gender = %s, class_id = %s
+                WHERE student_id = %s
+            """
+            # Thuc hien cau lenh querry
+            cursor.execute(querry, (full_name, dob, gender,class_id, student_id))
+
+            # Luu thay doi vao database
+            conn.commit()
+
+            return True
+        except Error as e:
+            print(f"ERROR: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return False
+
+def delete_student(student_id):
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            querry = """
+                DELETE FROM students
+                WHERE student_id = %s
+            """
+            cursor.execute(querry, (student_id,))
+            conn.commit()
+            return True
+        except Error as e:
+            print(f"ERROR: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return False
+
+
+
 # Classes 
 def get_all_classes():
     conn = create_connection()
