@@ -160,3 +160,57 @@ def get_all_classes():
                 conn.close()
     return []
 
+
+
+# Get Score List
+def get_scores_by_class(class_id):
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            querry = """
+                SELECT s.student_id, s.full_name,
+                       sc.score_15m, sc.score_45m, sc.score_final
+                FROM students s
+                LEFT JOIN scores sc ON sc.student_id = s.student_id AND subject_name = 'Toán'
+                WHERE s.class_id = %s
+            """
+            cursor.execute(querry, (class_id,))
+            result = cursor.fetchall()
+            return result
+        except Error as e:
+            print(f"Error: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return []
+
+# Save Score List
+def save_score_list(data_list):
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            # Cú pháp UPSERT của MySQL
+            querry = """
+                INSERT INTO scores (student_id, subject_name, score_15m, score_45m, score_final)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                score_15m = VALUES(score_15m),
+                score_45m = VALUES(score_45m),
+                score_final = VALUES(score_final)
+            """
+            # data_list chứa nhiều dòng, dùng executemany cho nhanh
+            cursor.executemany(querry, data_list)
+            conn.commit()
+            return True
+        except Error as e:
+            print(f"Error: {e}")
+        finally:
+            if conn.is_connected():
+                if cursor:
+                    cursor.close()
+                conn.close()
+    return False

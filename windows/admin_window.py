@@ -1,8 +1,10 @@
 # from database import check_login
 from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem
-from database import get_all_students, delete_student
+from PyQt6.QtCore import Qt
+from database import get_all_students, delete_student, get_all_classes, get_scores_by_class
 from PyQt6.uic import loadUi 
 from windows.student_dialog import StudentDialog
+import pandas as pd
 
 class AdminWindow(QMainWindow):
     def __init__(self):
@@ -12,7 +14,6 @@ class AdminWindow(QMainWindow):
         # Kết nối các button tab Home
         self.btnHome.clicked.connect(lambda: self.mainStack.setCurrentIndex(0))
         self.btnStudent.clicked.connect(self.show_student_page)
-        self.btnScore.clicked.connect(lambda: self.mainStack.setCurrentIndex(2))
         self.btnLogout.clicked.connect(self.handle_logout)
 
         # Kết nối các button Student 
@@ -20,11 +21,97 @@ class AdminWindow(QMainWindow):
         self.btnEditStudent.clicked.connect(self.open_edit_dialog)
         self.btnDeleteStudent.clicked.connect(self.handle_delete)
 
+        # Setup trang điểm số
+        self.btnScore.clicked.connect(lambda: self.mainStack.setCurrentIndex(2))
+        self.load_classes_for_score_page()
+        self.btnLoadScores.clicked.connect(self.load_scores_table)
+        self.btnSaveScore.clicked.connect(self.save_scores_data)
+
         # Setup Bảng (Table)
         self.setup_table()
 
         # Load data ngay khi mở
         self.load_data()
+
+    # Hàm load lớp vào tab điểm số
+    def load_classes_for_score_page(self):
+        classes = get_all_classes()
+        self.cboClassSelect.clear()
+        for c_id, c_name in classes:
+            self.cboClassSelect.addItem(c_name, c_id)     
+
+    # Hàm load bảng điểm
+    def load_scores_table(self):
+        class_id = self.cboClassSelect.currentIndex()
+        raw_data = get_scores_by_class(class_id)
+        # --- SỨC MẠNH CỦA PANDAS ---
+        # 1. Tạo DataFrame từ dữ liệu thô
+        df = pd.DataFrame(raw_data, columns=['ID', 'Name', '15m', '45m', 'Final'])
+
+        # 2. Chuyển đổi dữ liệu sang số (float) để tránh lỗi object/Decimal
+        cols = ['15m', '45m', 'Final']
+        for col in cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # 3. Xử lý dữ liệu (Điền số 0 vào ô trống để tính toán không lỗi)
+        df.fillna(0, inplace=True)
+        
+        # 3. Tính điểm trung bình (Ví dụ: 15p hệ số 1, 45p hs 2, Thi hs 3)
+        df['Average'] = (df['15m'] + df['45m']*2 + df['Final']*3) / 6
+        df['Average'] = df['Average'].round(2) # Làm tròn 2 số
+
+        # 4. Đổ DataFrame lên QTableWidget
+        self.tableScores.setRowCount(len(df))
+        
+        for row in range(len(df)):
+            # Cột 0: ID (Không cho sửa)
+            item_id = QTableWidgetItem(str(df.iloc[row]['ID']))
+            item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable) # Disable edit
+            self.tableScores.setItem(row, 0, item_id)
+            
+            # Cột 1: Tên (Không cho sửa)
+            item_name = QTableWidgetItem(str(df.iloc[row]['Name']))
+            item_name.setFlags(item_name.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.tableScores.setItem(row, 1, item_name)
+            
+            # Cột 2, 3, 4: Điểm (Cho phép sửa bình thường)
+            self.tableScores.setItem(row, 2, QTableWidgetItem(str(df.iloc[row]['15m'])))
+            self.tableScores.setItem(row, 3, QTableWidgetItem(str(df.iloc[row]['45m'])))
+            self.tableScores.setItem(row, 4, QTableWidgetItem(str(df.iloc[row]['Final'])))
+            
+            # Cột 5: Điểm TB (Không cho sửa)
+            self.tableScores.setItem(row, 5, QTableWidgetItem(str(df.iloc[row]['Average'])))
+
+    # Hàm lưu điểm
+    def save_scores_data(self):
+        """ Quét dữ liệu trên bảng và lưu vào DB """
+        data_to_save = []
+        rows = self.tableScores.rowCount()
+        
+        for row in range(rows):
+            s_id = self.tableScores.item(row, 0).text()
+            
+            # Lấy điểm, nếu user xóa trắng thì coi là 0
+            try:
+                sc_15 = float(self.tableScores.item(row, 2).text())
+            except: sc_15 = 0.0
+            
+            try:
+                sc_45 = float(self.tableScores.item(row, 3).text())
+            except: sc_45 = 0.0
+                
+            try:
+                sc_final = float(self.tableScores.item(row, 4).text())
+            except: sc_final = 0.0
+            
+            data_to_save.append((s_id, sc_15, sc_45, sc_final))
+            
+        if save_score_list(data_to_save):
+            QMessageBox.information(self, "Thành công", "Đã lưu bảng điểm!")
+            self.load_score_table() # Load lại để Pandas tính lại điểm TB mới nhất
+        else:
+            QMessageBox.critical(self, "Lỗi", "Lưu thất bại.")
+
 
     # Hàm lấy thông tin học sinh được chọn
     def get_selected_student_infor(self):
