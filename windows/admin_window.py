@@ -1,5 +1,5 @@
 # from database import check_login
-from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem, QVBoxLayout, QWidget, QFileDialog
 from PyQt6.QtCore import Qt
 from database import get_all_students, delete_student, get_all_classes, get_scores_by_class
 from PyQt6.uic import loadUi 
@@ -29,6 +29,7 @@ class AdminWindow(QMainWindow):
         self.load_classes_for_score_page()
         self.btnLoadScores.clicked.connect(self.load_scores_table)
         self.btnSaveScore.clicked.connect(self.save_scores_data)
+        self.btnExportExcel.clicked.connect(self.export_excel)
 
         # Setup Bảng (Table)
         self.setup_table()
@@ -39,13 +40,47 @@ class AdminWindow(QMainWindow):
         # Load data ngay khi mở
         self.load_data()
 
+    # Hàm setup khu vực vẽ biểu đồ
     def setup_chart_area(self):
         """ Chuẩn bị khu vực để vẽ biểu đồ """
-        self.chartArea = QWidget()
-        self.chartLayout = QVBoxLayout()
-        self.chartArea.setLayout(self.chartLayout)
-        self.chartCanvas = FigureCanvas(plt.gcf())
-        self.chartLayout.addWidget(self.chartCanvas)
+        self.chart_layout = QVBoxLayout(self.widgetChart)
+
+        # Tạo một cái khung tranh (Figure) của Matplotlib
+        self.chart_figure = plt.figure()
+        self.chart_canvas = FigureCanvas(self.chart_figure)
+        
+        # Nhét khung tranh vào layout
+        self.chart_layout.addWidget(self.chart_canvas)
+
+    # Hàm vẽ biểu đồ
+    def draw_chart(self, df):
+        """ Vẽ biểu đồ """
+        # 1. Xóa biểu đồ cũ đi để vẽ cái mới
+        self.chart_figure.clear()
+
+        # 2. Tính toán dữ liệu: Đếm số lượng Đậu (>=5) và Rớt (<5)
+        # Logic: df['Average'] là cột điểm TB mình đã tính ở bước trước
+        count_pass = len(df[df['Average'] >= 5.0])
+        count_fail = len(df[df['Average'] < 5.0])
+        
+        # Nếu chưa có dữ liệu thì thôi
+        if count_pass == 0 and count_fail == 0:
+            self.chart_canvas.draw()
+            return
+
+        # 3. Vẽ biểu đồ tròn (Pie Chart)
+        ax = self.chart_figure.add_subplot(111) # Tạo trục vẽ
+        labels = ['Đậu', 'Rớt']
+        sizes = [count_pass, count_fail]
+        colors = ['#4CAF50', '#F44336'] # Xanh lá và Đỏ
+        
+        # Vẽ
+        ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal') # Để biểu đồ tròn vo
+        ax.set_title(f"Tỷ lệ Đậu/Rớt (Tổng: {count_pass + count_fail} HS)")
+
+        # 4. Cập nhật hiển thị
+        self.chart_canvas.draw()
 
     # Hàm load lớp vào tab điểm số
     def load_classes_for_score_page(self):
@@ -97,6 +132,8 @@ class AdminWindow(QMainWindow):
             
             # Cột 5: Điểm TB (Không cho sửa)
             self.tableScores.setItem(row, 5, QTableWidgetItem(str(df.iloc[row]['Average'])))
+            
+        self.draw_chart(df)
 
     # Hàm lưu điểm
     def save_scores_data(self):
@@ -127,7 +164,6 @@ class AdminWindow(QMainWindow):
             self.load_score_table() # Load lại để Pandas tính lại điểm TB mới nhất
         else:
             QMessageBox.critical(self, "Lỗi", "Lưu thất bại.")
-
 
     # Hàm lấy thông tin học sinh được chọn
     def get_selected_student_infor(self):
@@ -233,6 +269,51 @@ class AdminWindow(QMainWindow):
             self.tableStudent.setItem(row, 2, QTableWidgetItem(dob))
             self.tableStudent.setItem(row, 3, QTableWidgetItem(student[3]))
             self.tableStudent.setItem(row, 4, QTableWidgetItem(student[4]))
+
+    # Xuất bảng điểm ra file Excel
+    def export_excel(self):
+        """ Xuất bảng điểm hiện tại ra file Excel """
+        # 1. Kiểm tra xem đã có dữ liệu chưa
+        # Lấy lại dữ liệu từ DB (giống hàm load_score) hoặc lấy từ TableWidget (phức tạp hơn)
+        # Cách nhanh nhất: Gọi lại hàm lấy dữ liệu để tạo DataFrame sạch
+        class_id = self.cboClassSelect.currentData()
+        if not class_id:
+             QMessageBox.warning(self, "Lỗi", "Vui lòng chọn lớp trước!")
+             return
+
+        raw_data = get_scores_by_class(class_id)
+        if not raw_data:
+             QMessageBox.warning(self, "Lỗi", "Lớp này chưa có dữ liệu để xuất!")
+             return
+
+        # Tạo DataFrame
+        df = pd.DataFrame(raw_data, columns=['ID', 'Name', '15m', '45m', 'Final'])
+        df.fillna(0, inplace=True)
+        df['Average'] = (df['15m'] + df['45m']*2 + df['Final']*3) / 6
+        df['Average'] = df['Average'].round(2)
+
+        # 2. Mở hộp thoại chọn nơi lưu file
+        # Trả về đường dẫn file người dùng chọn
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, 
+            "Lưu file Excel", 
+            "", 
+            "Excel Files (*.xlsx);;All Files (*)"
+        )
+
+        # 3. Lưu file
+        if file_path:
+            try:
+                # Nếu người dùng quên gõ đuôi .xlsx thì tự thêm vào
+                if not file_path.endswith('.xlsx'):
+                    file_path += '.xlsx'
+                
+                # Hàm thần thánh của Pandas
+                df.to_excel(file_path, index=False, sheet_name='BangDiem')
+                
+                QMessageBox.information(self, "Thành công", f"Đã xuất file tại:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Lỗi", f"Không thể ghi file: {e}")
 
     # Hàm xử lý khi nhấn nút Đăng xuất
     def handle_logout(self):
