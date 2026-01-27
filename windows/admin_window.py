@@ -1,10 +1,13 @@
 # from database import check_login
-from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem
+from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem, QVBoxLayout, QWidget
 from PyQt6.QtCore import Qt
 from database import get_all_students, delete_student, get_all_classes, get_scores_by_class
 from PyQt6.uic import loadUi 
 from windows.student_dialog import StudentDialog
 import pandas as pd
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 class AdminWindow(QMainWindow):
     def __init__(self):
@@ -30,11 +33,23 @@ class AdminWindow(QMainWindow):
         # Setup Bảng (Table)
         self.setup_table()
 
+        # Setup Chart
+        self.setup_chart_area()
+
         # Load data ngay khi mở
         self.load_data()
 
+    def setup_chart_area(self):
+        """ Chuẩn bị khu vực để vẽ biểu đồ """
+        self.chartArea = QWidget()
+        self.chartLayout = QVBoxLayout()
+        self.chartArea.setLayout(self.chartLayout)
+        self.chartCanvas = FigureCanvas(plt.gcf())
+        self.chartLayout.addWidget(self.chartCanvas)
+
     # Hàm load lớp vào tab điểm số
     def load_classes_for_score_page(self):
+        """ Load các lớp vào combobox """
         classes = get_all_classes()
         self.cboClassSelect.clear()
         for c_id, c_name in classes:
@@ -42,6 +57,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm load bảng điểm
     def load_scores_table(self):
+        """ Load bảng điểm """
         class_id = self.cboClassSelect.currentIndex()
         raw_data = get_scores_by_class(class_id)
         # --- SỨC MẠNH CỦA PANDAS ---
@@ -115,6 +131,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm lấy thông tin học sinh được chọn
     def get_selected_student_infor(self):
+        """ Lấy thông tin học sinh được chọn """
         current_row = self.tableStudent.currentRow()
         if current_row < 0:
             return None
@@ -132,6 +149,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm xử lý khi nhấn nút Thêm
     def open_add_dialog(self):
+        """ Mở dialog thêm học sinh """
         self.student_dialog = StudentDialog()
         # exec() sẽ dừng màn hình chính lại chờ Dialog đóng
         if self.student_dialog.exec():
@@ -140,6 +158,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm xử lý khi nhấn nút Sửa
     def open_edit_dialog(self):
+        """ Mở dialog sửa học sinh """
         # 1. Kiểm tra xem có chọn dòng nào chưa
         selected_student = self.get_selected_student_infor()
         if not selected_student:
@@ -153,6 +172,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm xử lý khi nhấn nút Xóa
     def handle_delete(self):
+        """ Xóa học sinh """
         # 1. Kiểm tra chọn dòng
         student_selected = self.get_selected_student_infor()
         if not student_selected:
@@ -171,11 +191,13 @@ class AdminWindow(QMainWindow):
         
     # Hàm hiển thị trang Student
     def show_student_page(self):
+        """ Hiển thị trang Student """
         self.mainStack.setCurrentIndex(1)   # Chuyển sang trang Student
         self.load_data()    # load lại dữ liệu 
 
     # Hàm setup Bảng (Table)
     def setup_table(self):
+        """ Setup Bảng (Table) """
         self.tableStudent.setColumnCount(5) # 5 trường dữ liệu
         self.tableStudent.setHorizontalHeaderLabels([
             "ID",
@@ -191,6 +213,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm load dữ liệu vào bảng
     def load_data(self):
+        """ Load dữ liệu vào bảng """
         data = get_all_students()
 
         # 1. Set số dòng cho bảng bằng số bản ghi lấy được
@@ -213,6 +236,7 @@ class AdminWindow(QMainWindow):
 
     # Hàm xử lý khi nhấn nút Đăng xuất
     def handle_logout(self):
+        """ Xử lý khi nhấn nút Đăng xuất """
         from windows.login_window import LoginWindow
         self.login = LoginWindow()
         self.login.show()
