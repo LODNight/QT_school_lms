@@ -214,3 +214,27 @@ def save_score_list(data_list):
                     cursor.close()
                 conn.close()
     return False
+
+# Tìm kiếm học sinh
+def search_students(keyword):
+    """ Tìm kiếm học sinh theo Tên hoặc ID """
+    conn = create_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            # Dùng % để tìm kiếm gần đúng
+            search_pattern = f"%{keyword}%"
+            
+            query = """
+                SELECT s.student_id, s.full_name, s.dob, s.gender, c.class_name 
+                FROM students s
+                LEFT JOIN classes c ON s.class_id = c.class_id
+                WHERE s.full_name LIKE %s OR s.student_id LIKE %s
+            """
+            cursor.execute(query, (search_pattern, search_pattern))
+            return cursor.fetchall()
+        except Error as e:
+            print(f"Lỗi tìm kiếm: {e}")
+        finally:
+            conn.close()
+    return []

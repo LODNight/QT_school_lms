@@ -1,7 +1,7 @@
 # from database import check_login
 from PyQt6.QtWidgets import  QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem, QVBoxLayout, QWidget, QFileDialog
 from PyQt6.QtCore import Qt
-from database import get_all_students, delete_student, get_all_classes, get_scores_by_class
+from database import get_all_students, delete_student, get_all_classes, get_scores_by_class, search_students
 from PyQt6.uic import loadUi 
 from windows.student_dialog import StudentDialog
 import pandas as pd
@@ -30,6 +30,9 @@ class AdminWindow(QMainWindow):
         self.btnLoadScores.clicked.connect(self.load_scores_table)
         self.btnSaveScore.clicked.connect(self.save_scores_data)
         self.btnExportExcel.clicked.connect(self.export_excel)
+
+        self.btnSearch.clicked.connect(self.handle_search)
+        self.txtSearch.returnPressed.connect(self.handle_search)
 
         # Setup Bảng (Table)
         self.setup_table()
@@ -251,26 +254,39 @@ class AdminWindow(QMainWindow):
     def load_data(self):
         """ Load dữ liệu vào bảng """
         data = get_all_students()
+        self.update_student_table(data)
 
-        # 1. Set số dòng cho bảng bằng số bản ghi lấy được
+    def handle_search(self):
+        keyword = self.txtSearch.text().strip()
+        
+        if not keyword:
+            # Nếu ô tìm kiếm rỗng thì load lại toàn bộ danh sách
+            self.load_data() 
+            return
+
+        # Gọi DB tìm kiếm
+        results = search_students(keyword)
+        
+        self.update_student_table(results) # Gợi ý: Viết hàm update_student_table
+
+    # Hàm update bảng học sinh
+    def update_student_table(self, data):
+        """ Hàm phụ trợ để đỡ viết lặp code hiển thị """
         self.tableStudent.setRowCount(len(data))
-
-        # 2. Duyệt qua từng dòng dữ liệu
-        for row, student in enumerate(data):
-            # row_data là tuple: ('HS001', 'Nguyen Van A', ...)
-            raw_dob = student[2]
+        for row_index, row_data in enumerate(data):
+            raw_dob = row_data[2]
             if raw_dob:
                 dob = raw_dob.strftime("%d/%m/%Y")
             else:
                 dob = ""
 
-            self.tableStudent.setItem(row, 0, QTableWidgetItem(student[0]))
-            self.tableStudent.setItem(row, 1, QTableWidgetItem(student[1]))
-            self.tableStudent.setItem(row, 2, QTableWidgetItem(dob))
-            self.tableStudent.setItem(row, 3, QTableWidgetItem(student[3]))
-            self.tableStudent.setItem(row, 4, QTableWidgetItem(student[4]))
+            self.tableStudent.setItem(row_index, 0, QTableWidgetItem(row_data[0]))
+            self.tableStudent.setItem(row_index, 1, QTableWidgetItem(row_data[1]))
+            self.tableStudent.setItem(row_index, 2, QTableWidgetItem(dob))
+            self.tableStudent.setItem(row_index, 3, QTableWidgetItem(row_data[3]))
+            self.tableStudent.setItem(row_index, 4, QTableWidgetItem(row_data[4]))
 
-    # Xuất bảng điểm ra file Excel
+    # Hàm xuất bảng điểm ra file Excel
     def export_excel(self):
         """ Xuất bảng điểm hiện tại ra file Excel """
         # 1. Kiểm tra xem đã có dữ liệu chưa

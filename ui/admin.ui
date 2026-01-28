@@ -116,7 +116,7 @@
        <item>
         <widget class="QStackedWidget" name="mainStack">
          <property name="currentIndex">
-          <number>2</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="pageHome">
           <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -153,6 +153,49 @@
              <property name="text">
               <string>-- Học Sinh --</string>
              </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="widget" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <item>
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Tìm học sinh</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="txtSearch">
+                <property name="minimumSize">
+                 <size>
+                  <width>200</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnSearch">
+                <property name="text">
+                 <string>Tìm kiếm</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
             </widget>
            </item>
            <item>
