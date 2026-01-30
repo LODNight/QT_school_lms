@@ -19,7 +19,7 @@ def create_user(use: schemas.UserCreate, db: Session = Depends(get_db)):
     # 1. Check trùng username
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail="Username đã tồn tại")
     
     # 2. Mã hóa mật khẩu
     hashed_password = security.get_password_hash(user.password)

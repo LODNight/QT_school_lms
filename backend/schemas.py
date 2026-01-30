@@ -20,3 +20,12 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True # Để Pydantic đọc được dữ liệu từ SQLAlchemy
+
+# Khuôn mẫu cho cái Token trả về
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# Khuôn mẫu dữ liệu bên trong Token (để sau này giải mã ra)
+class TokenData(BaseModel):
+    username: Optional[str] = None
