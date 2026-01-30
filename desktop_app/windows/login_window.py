@@ -2,6 +2,8 @@ from database import check_login
 from PyQt6.QtWidgets import  QMainWindow, QMessageBox
 from PyQt6.uic import loadUi 
 
+import api_client
+
 
 class LoginWindow(QMainWindow):
     def __init__(self):
@@ -29,7 +31,7 @@ class LoginWindow(QMainWindow):
             self.lblMessage_username.setStyleSheet("color: red")
             self.lblMessage_password.setStyleSheet("color: red")
 
-        is_success, full_name, role = check_login(username, password)
+        is_success, full_name, role = api_client.login(username, password)
 
         if is_success:
             self.lblMessage_username.setText("Login successful")
@@ -49,8 +51,6 @@ class LoginWindow(QMainWindow):
                 self.user_window = UserWindow()
                 self.user_window.show()
                 self.close()
-
-
         else:
             self.lblMessage_username.setText("Login failed")
             self.lblMessage_password.setText("Login failed")
