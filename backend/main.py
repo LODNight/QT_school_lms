@@ -1,24 +1,13 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List
+from database import engine, Base
+import models # Import file models để nó nhận diện các class
+
+# LỆNH QUAN TRỌNG: Tạo toàn bộ bảng vào Database
+# Nó sẽ tự kết nối MySQL -> Tạo DB school_lms_v2 (nếu chưa có thì phải tạo DB rỗng trước) -> Tạo Tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Giả lập database (Sau này sẽ nối MySQL thật)
-fake_students_db = [
-    {"id": "HS001", "name": "Nguyễn Văn A", "class": "10A1"},
-    {"id": "HS002", "name": "Trần Thị B", "class": "10A1"}
-]
-
-class Student(BaseModel):
-    id: str
-    name: str
-    class_name: str = "Unknown"
-
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to LMS API System"}
-
-@app.get("/students", response_model=List[Student])
-def get_students():
-    return fake_students_db
+    return {"message": "Hệ thống LMS Backend đang chạy!"}
