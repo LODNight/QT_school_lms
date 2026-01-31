@@ -21,7 +21,7 @@ def get_password_hash(password):
 
 # 2. HÀM TẠO TOKEN (Cấp vé)
 def create_access_token(data: dict, expires_data: Optional[timedelta] = None):
-    to_encode = data.copyy()
+    to_encode = data.copy()
     if expires_data:
         expire = datetime.now() + expires_data
     else:

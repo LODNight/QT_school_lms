@@ -8,8 +8,8 @@ from windows.admin_window import AdminWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # window = LoginWindow()
-    window = AdminWindow()
+    window = LoginWindow()
+    # window = AdminWindow()
     window.show()
 
     try:

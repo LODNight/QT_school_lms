@@ -31,32 +31,44 @@ class LoginWindow(QMainWindow):
             self.lblMessage_username.setStyleSheet("color: red")
             self.lblMessage_password.setStyleSheet("color: red")
 
-        is_success, full_name, role = api_client.login(username, password)
-
+        is_success, message = api_client.login(username, password)
+        
         if is_success:
+            # Lấy thông tin user sau khi login thành công
+            user_info = api_client.get_my_info()
+            
+            if not user_info:
+                 QMessageBox.critical(self, "Lỗi", "Không thể lấy thông tin người dùng!")
+                 return
+
+            full_name = user_info.get("full_name", "")
+            role = user_info.get("role", "")
+
             self.lblMessage_username.setText("Login successful")
             self.lblMessage_password.setText("Login successful")
 
             self.lblMessage_username.setStyleSheet("color: green")
             self.lblMessage_password.setStyleSheet("color: green")
-            QMessageBox.information(self, "Login successful", f"username: {full_name}\nrole: {role}")
+            QMessageBox.information(self, "Login successful", f"Xin chào: {full_name}\nVai trò: {role}")
 
             if role == "admin":
                 from windows.admin_window import AdminWindow
                 self.admin_window = AdminWindow()
                 self.admin_window.show()
                 self.close()
-            elif role == "user":
+            elif role == "user" or role == "student":
                 from windows.user_window import UserWindow
                 self.user_window = UserWindow()
                 self.user_window.show()
                 self.close()
+            else:
+                 QMessageBox.warning(self, "Lỗi", f"Vai trò không hợp lệ: {role}")
         else:
-            self.lblMessage_username.setText("Login failed")
-            self.lblMessage_password.setText("Login failed")
+            self.lblMessage_username.setText(message)
+            self.lblMessage_password.setText(message)
 
             self.lblMessage_username.setStyleSheet("color: red")
             self.lblMessage_password.setStyleSheet("color: red")
 
-            QMessageBox.information(self, "Login failed", "Login failed")
+            QMessageBox.warning(self, "Login failed", message)
 

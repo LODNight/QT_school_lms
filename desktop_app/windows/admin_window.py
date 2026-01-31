@@ -5,6 +5,7 @@ from database import get_all_students, delete_student, get_all_classes, get_scor
 from PyQt6.uic import loadUi 
 from windows.student_dialog import StudentDialog
 import pandas as pd
+import api_client
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -42,6 +43,34 @@ class AdminWindow(QMainWindow):
 
         # Load data ngay khi mở
         self.load_data()
+
+        # Load data bằng API
+        self.load_data_by_api()
+
+    # Hàm load dữ liệu từ API
+    def load_data_by_api(self):
+        """Load dữ liệu từ API và hiển thị lên bảng."""
+        # 1. Gọi API lấy danh sách users
+        users = api_client.get_current_user()
+
+        # 2. Reset bảng
+        self.tablesStudent.setRowCount(0)
+
+        if not users:
+            return
+
+        # 3. Cập nhật dữ liệu vào bảng
+        self.tablesStudent.setRowCount(len(users))
+        
+        # Danh sách các key tương ứng với từng cột (0 -> 4)
+        column_keys = ["id", "username", "full_name", "email", "role"]
+
+        for row_idx, user in enumerate(users):
+            for col_idx, key in enumerate(column_keys):
+                # Lấy giá trị an toàn bằng .get(), chuyển về string
+                value = str(user.get(key, ""))
+                item = QTableWidgetItem(value)
+                self.tablesStudent.setItem(row_idx, col_idx, item)
 
     # Hàm setup khu vực vẽ biểu đồ
     def setup_chart_area(self):
@@ -171,15 +200,15 @@ class AdminWindow(QMainWindow):
     # Hàm lấy thông tin học sinh được chọn
     def get_selected_student_infor(self):
         """ Lấy thông tin học sinh được chọn """
-        current_row = self.tableStudent.currentRow()
+        current_row = self.tablesStudent.currentRow()
         if current_row < 0:
             return None
         
-        student_id = self.tableStudent.item(current_row, 0).text()
-        student_name = self.tableStudent.item(current_row, 1).text()
-        student_dob = self.tableStudent.item(current_row, 2).text()
-        student_gender = self.tableStudent.item(current_row, 3).text()
-        student_class = self.tableStudent.item(current_row, 4).text()
+        student_id = self.tablesStudent.item(current_row, 0).text()
+        student_name = self.tablesStudent.item(current_row, 1).text()
+        student_dob = self.tablesStudent.item(current_row, 2).text()
+        student_gender = self.tablesStudent.item(current_row, 3).text()
+        student_class = self.tablesStudent.item(current_row, 4).text()
         
         return {
             "student_id": student_id, "student_name": student_name, "student_dob": student_dob,
@@ -237,8 +266,8 @@ class AdminWindow(QMainWindow):
     # Hàm setup Bảng (Table)
     def setup_table(self):
         """ Setup Bảng (Table) """
-        self.tableStudent.setColumnCount(5) # 5 trường dữ liệu
-        self.tableStudent.setHorizontalHeaderLabels([
+        self.tablesStudent.setColumnCount(5) # 5 trường dữ liệu
+        self.tablesStudent.setHorizontalHeaderLabels([
             "ID",
             "Họ và Tên",
             "Ngày sinh",
@@ -247,7 +276,7 @@ class AdminWindow(QMainWindow):
         ])
 
         # Tự động co giãn cột cho lớp
-        header = self.tableStudent.horizontalHeader()
+        header = self.tablesStudent.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
     # Hàm load dữ liệu vào bảng
@@ -256,6 +285,7 @@ class AdminWindow(QMainWindow):
         data = get_all_students()
         self.update_student_table(data)
 
+    # Hàm tìm kiếm
     def handle_search(self):
         keyword = self.txtSearch.text().strip()
         
@@ -272,7 +302,7 @@ class AdminWindow(QMainWindow):
     # Hàm update bảng học sinh
     def update_student_table(self, data):
         """ Hàm phụ trợ để đỡ viết lặp code hiển thị """
-        self.tableStudent.setRowCount(len(data))
+        self.tablesStudent.setRowCount(len(data))
         for row_index, row_data in enumerate(data):
             raw_dob = row_data[2]
             if raw_dob:
@@ -280,11 +310,11 @@ class AdminWindow(QMainWindow):
             else:
                 dob = ""
 
-            self.tableStudent.setItem(row_index, 0, QTableWidgetItem(row_data[0]))
-            self.tableStudent.setItem(row_index, 1, QTableWidgetItem(row_data[1]))
-            self.tableStudent.setItem(row_index, 2, QTableWidgetItem(dob))
-            self.tableStudent.setItem(row_index, 3, QTableWidgetItem(row_data[3]))
-            self.tableStudent.setItem(row_index, 4, QTableWidgetItem(row_data[4]))
+            self.tablesStudent.setItem(row_index, 0, QTableWidgetItem(row_data[0]))
+            self.tablesStudent.setItem(row_index, 1, QTableWidgetItem(row_data[1]))
+            self.tablesStudent.setItem(row_index, 2, QTableWidgetItem(dob))
+            self.tablesStudent.setItem(row_index, 3, QTableWidgetItem(row_data[3]))
+            self.tablesStudent.setItem(row_index, 4, QTableWidgetItem(row_data[4]))
 
     # Hàm xuất bảng điểm ra file Excel
     def export_excel(self):

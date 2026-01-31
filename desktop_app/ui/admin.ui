@@ -251,7 +251,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QTableWidget" name="tableStudent"/>
+            <widget class="QTableWidget" name="tablesStudent"/>
            </item>
           </layout>
          </widget>
