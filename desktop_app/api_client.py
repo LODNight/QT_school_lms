@@ -68,10 +68,27 @@ class ApiClient:
                 "password": password
             }
         )
-        if response.success:
-            self.set_token(response.data["access_token"])
-            self.current_user = response.data["user"]
+        if not response.success:
+            return response
+        
+        # Chỉ set token
+        self.set_token(response.data["access_token"])
+        
+        # Gọi API lấy user
+        user_response = self.request(
+            method="GET",
+            endpoint="/users/me"
+        )
+
+        if not user_response.success:
+            return ApiClient(
+                False,
+                message = "Đăng nhập thành công nhưng không lấy được thông tin user"
+            )
+        
+        self.current_user = user_response.data
         return response
+
 
     # Lấy danh sách Users (Admin only)
     def get_all_users(self):
