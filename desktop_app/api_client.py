@@ -39,48 +39,21 @@ class ApiClient:
             if response.ok:
                 return ApiResponse(True, response.json(), status_code=response.status_code)
 
-            if response.status_code == HTTPStatus.UNAUTHORIZED:
-                return ApiResponse(False,
-                    message="Token đã hết hạn hoặc không hợp lệ", 
-                    status_code=response.status_code
-                )
-
-            if response.status_code == HTTPStatus.FORBIDDEN:
-                return ApiResponse(
-                    False, 
-                    message="Bạn không có quyền truy cập", 
-                    status_code=response.status_code
-                )      
-
-            if response.status_code == HTTPStatus.NOT_FOUND:
-                return ApiResponse(
-                    False, 
-                    message="Không tìm thấy tài nguyên", 
-                    status_code=response.status_code
-                )
-
-            if response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
-                return ApiResponse(
-                    False, 
-                    message="Lỗi máy chủ", 
-                    status_code=response.status_code
-                )
+            message = {
+                HTTPStatus.UNAUTHORIZED: "Token hết hạn",
+                HTTPStatus.FORBIDDEN: "Không có quyền",
+                HTTPStatus.NOT_FOUND: "Không tìm thấy tài nguyên",
+                HTTPStatus.INTERNAL_SERVER_ERROR: "Lỗi máy chủ"
+            }
 
             return ApiResponse(
-                False, 
-                message="Lỗi không xác định", 
-                status_code=response.status_code
-            )
-
-        except requests.exceptions.ConnectionError:
-            return ApiResponse(
-                False, 
-                message = "Không thể kết nối đến Server! (Bạn đã bật Backend chưa?)", 
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+                False,
+                message = message.get(response.status_code, "Lỗi không xác định"),
+                status_code = response.status_code
             )
 
         except requests.exceptions.RequestException as e:
-            return ApiResponse(False, message = f"Request Error: {e}", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return ApiResponse(False, message = str(e))
 
     # Đăng nhập để nhận Token
     def login(self, username, password):
