@@ -5,7 +5,6 @@ import logging
 
 
 # Địa chỉ Server (Backend đang chạy)
-# api = ApiClient(os.getenv("API_BASE_URL"))
 BASE_URL = "http://127.0.0.1:8000"
 
 @dataclass
@@ -27,6 +26,7 @@ class ApiClient:
         self.session.headers.update({
             "Authorization": f"Bearer {token}"
         })
+        
     def request(self, method, endpoint, **kwargs):
         try: 
             response = self.session.request(
@@ -48,12 +48,12 @@ class ApiClient:
 
             return ApiResponse(
                 False,
-                message = message.get(response.status_code, "Lỗi không xác định"),
+                message = message.get(response.status_code, f"Lỗi: {response.status_code}"),
                 status_code = response.status_code
             )
 
         except requests.exceptions.RequestException as e:
-            return ApiResponse(False, message = str(e))
+            return ApiResponse(False, message = f"Lỗi kết nối: {str(e)}")
 
     # Đăng nhập để nhận Token
     def login(self, username, password):
@@ -73,17 +73,6 @@ class ApiClient:
             self.current_user = response.data["user"]
         return response
 
-    # Lấy thông tin user đang đăng nhập
-    def get_my_info(self):
-        """
-        Gọi API /users/me để lấy thông tin user đang đăng nhập (Name, Role...)
-        """
-        response = self.request(
-            method = 'GET',
-            endpoint = '/users/me',
-        )
-        return response.data if response.success else None
-
     # Lấy danh sách Users (Admin only)
     def get_all_users(self):
         """
@@ -95,7 +84,6 @@ class ApiClient:
         )
         return response.data if response.success else []
         
-
     # Lấy danh sách Lớp
     def get_all_classes(self):
         """ Gọi API lấy danh sách Lớp """
@@ -105,7 +93,6 @@ class ApiClient:
         )
         return response.data if response.success else []
         
-
     # Lấy danh sách khóa học
     def get_all_course(self):
         """ Gọi API lấy danh sách khóa học """
@@ -114,4 +101,6 @@ class ApiClient:
             endpoint = '/courses',
         )
         return response.data if response.success else []
-        
+
+# --- SINGLETON INSTANCE ---
+client = ApiClient(BASE_URL)

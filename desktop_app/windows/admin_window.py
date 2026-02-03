@@ -45,13 +45,14 @@ class AdminWindow(QMainWindow):
         self.load_data()
 
         # Load data bằng API
-        self.load_data_by_api()
+        self.load_data_by_api() # Load Users
+        self.load_classes_combo()   # Load Classes
 
     # Hàm load dữ liệu từ API
     def load_data_by_api(self):
         """Load dữ liệu từ API và hiển thị lên bảng."""
         # 1. Gọi API lấy danh sách users
-        users = api_client.get_current_user()
+        users = api_client.client.get_all_users()
 
         # 2. Reset bảng
         self.tablesStudent.setRowCount(0)
@@ -71,6 +72,18 @@ class AdminWindow(QMainWindow):
                 value = str(user.get(key, ""))
                 item = QTableWidgetItem(value)
                 self.tablesStudent.setItem(row_idx, col_idx, item)
+
+    def load_classes_combo(self):
+        """ Load danh sách lớp vào combobox """
+        classes = api_client.client.get_all_classes()
+
+        if not classes:
+            return
+        if hasattr(self, 'cboClassSelect'):
+            self.cboClassSelect.clear()
+            for cls in classes:
+                display_name = f"{cls['name']} ({cls['course']['name']})"
+                self.cboClassSelect.addItem(display_name, cls['id'])
 
     # Hàm setup khu vực vẽ biểu đồ
     def setup_chart_area(self):
