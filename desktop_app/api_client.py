@@ -1,84 +1,144 @@
 import requests
+from dataclasses import dataclass
+from http import HTTPStatus
+import logging
+
 
 # Địa chỉ Server (Backend đang chạy)
+# api = ApiClient(os.getenv("API_BASE_URL"))
 BASE_URL = "http://127.0.0.1:8000"
 
-# Biến toàn cục để lưu Token sau khi đăng nhập thành công
-CURRENT_TOKEN = None
-CURRENT_USER_INFO = None
+@dataclass
+class ApiResponse:
+    success: bool
+    data: any = None
+    message: str = ""
+    status_code: int = None
 
-def login(username, password):
-    """
-    Gửi username/pass lên API để xin Token
-    """
-    global CURRENT_TOKEN
-    
-    url = f"{BASE_URL}/token"
-    # API Login yêu cầu gửi dạng Form (x-www-form-urlencoded)
-    payload = {
-        "username": username,
-        "password": password
-    }
-    
-    try:
-        response = requests.post(url, data=payload)
+class ApiClient:
+    def __init__(self, base_url):
+        self.base_url = base_url
+        self.token = None
+        self.current_user = None
+        self.session = requests.Session()
+
+    def set_token(self, token):
+        self.token = token
+        self.session.headers.update({
+            "Authorization": f"Bearer {token}"
+        })
+    def request(self, method, endpoint, **kwargs):
+        try: 
+            response = self.session.request(
+                method,
+                f"{self.base_url}{endpoint}",
+                timeout=5,
+                **kwargs
+            )
+
+            if response.ok:
+                return ApiResponse(True, response.json(), status_code=response.status_code)
+
+            if response.status_code == HTTPStatus.UNAUTHORIZED:
+                return ApiResponse(False,
+                    message="Token đã hết hạn hoặc không hợp lệ", 
+                    status_code=response.status_code
+                )
+
+            if response.status_code == HTTPStatus.FORBIDDEN:
+                return ApiResponse(
+                    False, 
+                    message="Bạn không có quyền truy cập", 
+                    status_code=response.status_code
+                )      
+
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return ApiResponse(
+                    False, 
+                    message="Không tìm thấy tài nguyên", 
+                    status_code=response.status_code
+                )
+
+            if response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
+                return ApiResponse(
+                    False, 
+                    message="Lỗi máy chủ", 
+                    status_code=response.status_code
+                )
+
+            return ApiResponse(
+                False, 
+                message="Lỗi không xác định", 
+                status_code=response.status_code
+            )
+
+        except requests.exceptions.ConnectionError:
+            return ApiResponse(
+                False, 
+                message = "Không thể kết nối đến Server! (Bạn đã bật Backend chưa?)", 
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+            )
+
+        except requests.exceptions.RequestException as e:
+            return ApiResponse(False, message = f"Request Error: {e}", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    # Đăng nhập để nhận Token
+    def login(self, username, password):
+        """
+        Gửi username/pass lên API để xin Token
+        """
+        response = self.request(
+            method="POST", 
+            endpoint="/token", 
+            data={
+                "username": username,
+                "password": password
+            }
+        )
+        if response.success:
+            self.set_token(response.data["access_token"])
+            self.current_user = response.data["user"]
+        return response
+
+    # Lấy thông tin user đang đăng nhập
+    def get_my_info(self):
+        """
+        Gọi API /users/me để lấy thông tin user đang đăng nhập (Name, Role...)
+        """
+        response = self.request(
+            method = 'GET',
+            endpoint = '/users/me',
+        )
+        return response.data if response.success else None
+
+    # Lấy danh sách Users (Admin only)
+    def get_all_users(self):
+        """
+        Gọi API lấy danh sách Users (Admin only)
+        """
+        response = self.request(
+            method = 'GET',
+            endpoint = '/users',
+        )
+        return response.data if response.success else []
         
-        if response.status_code == 200:
-            data = response.json()
-            CURRENT_TOKEN = data["access_token"]
-            return True, "Đăng nhập thành công!"
-        elif response.status_code == 401:
-            return False, "Sai tên đăng nhập hoặc mật khẩu!"
-        else:
-            return False, f"Lỗi Server: {response.status_code}"
-            
-    except requests.exceptions.ConnectionError:
-        return False, "Không thể kết nối đến Server! (Bạn đã bật Backend chưa?)"
-    except Exception as e:
-        return False, f"Lỗi không xác định: {e}"
 
-def get_auth_header():
-    """ Hàm phụ trợ: Tạo header chứa Token để dùng cho các request sau """
-    if CURRENT_TOKEN:
-        return {"Authorization": f"Bearer {CURRENT_TOKEN}"}
-    return {}
+    # Lấy danh sách Lớp
+    def get_all_classes(self):
+        """ Gọi API lấy danh sách Lớp """
+        response = self.request(
+            method = 'GET',
+            endpoint = '/classes',
+        )
+        return response.data if response.success else []
+        
 
-def get_my_info():
-    """
-    Gọi API /users/me để lấy thông tin user đang đăng nhập (Name, Role...)
-    """
-    url = f"{BASE_URL}/users/me"
-    headers = get_auth_header()
-    
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        return None
-    except:
-        return None
-
-def get_current_user():
-    """
-    Gọi API lấy danh sách Users (Admin only)
-    NOTE: Tên hàm hơi dễ nhầm lẫn, đây là lấy TOÀN BỘ user
-    """
-    url = f"{BASE_URL}/users"
-    headers = get_auth_header() # Lấy header chứa Token
-    
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 401:
-            print(f"Token đã hết hạn hoặc không hợp lệ")
-            return []
-        else:
-            print(f"Lỗi Server: {response.status_code}")
-            return []
-    except requests.exceptions.ConnectionError:
-        print(f"Không thể kết nối đến Server!")
-        return []
-    except Exception as e:
-        print(f"Lỗi kết nối: {e}")
-        return []
+    # Lấy danh sách khóa học
+    def get_all_course(self):
+        """ Gọi API lấy danh sách khóa học """
+        response = self.request(
+            method = 'GET',
+            endpoint = '/courses',
+        )
+        return response.data if response.success else []
+        

@@ -56,6 +56,4 @@ def read_users(
 @router.get("/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
     """ Trả về thông tin của chính user đang đăng nhập """
-    print(current_user)
-    print(models.User.username)
     return current_user
