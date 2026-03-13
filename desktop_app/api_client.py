@@ -119,5 +119,21 @@ class ApiClient:
         )
         return response.data if response.success else []
 
+    def get_grade_board(self, class_id):
+        """ Gọi API lấy bảng điểm của 1 lớp """
+        return self.request(
+            method = 'GET',
+            endpoint = f'/classes/{class_id}/grade-board',
+        )
+
+    def save_grades(self, grades_list):
+        """ Gọi API cập nhật điểm số """
+        return self.request(
+            method = 'POST',
+            endpoint = '/grades/update',
+            json = grades_list
+        )
+
+
 # --- SINGLETON INSTANCE ---
 client = ApiClient(BASE_URL)

@@ -137,78 +137,87 @@ class AdminWindow(QMainWindow):
 
     # Hàm load bảng điểm
     def load_scores_table(self):
-        """ Load bảng điểm """
-        class_id = self.cboClassSelect.currentIndex()
-        raw_data = get_scores_by_class(class_id)
-        # --- SỨC MẠNH CỦA PANDAS ---
-        # 1. Tạo DataFrame từ dữ liệu thô
-        df = pd.DataFrame(raw_data, columns=['ID', 'Name', '15m', '45m', 'Final'])
+        class_id = self.cboClassSelect.currentData()
+        if not class_id:
+            return
 
-        # 2. Chuyển đổi dữ liệu sang số (float) để tránh lỗi object/Decimal
-        cols = ['15m', '45m', 'Final']
-        for col in cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+        response = api_client.client.get_grade_board(class_id)
+        if not response.success:
+            self.tableScores.setRowCount(0)
+            self.tableScores.setColumnCount(0)
+            return
 
-        # 3. Xử lý dữ liệu (Điền số 0 vào ô trống để tính toán không lỗi)
-        df.fillna(0, inplace=True)
-        
-        # 3. Tính điểm trung bình (Ví dụ: 15p hệ số 1, 45p hs 2, Thi hs 3)
-        df['Average'] = (df['15m'] + df['45m']*2 + df['Final']*3) / 6
-        df['Average'] = df['Average'].round(2) # Làm tròn 2 số
+        data = response.data
+        columns_info = data["columns"]
+        rows_info = data["rows"]
 
-        # 4. Đổ DataFrame lên QTableWidget
-        self.tableScores.setRowCount(len(df))
-        
-        for row in range(len(df)):
-            # Cột 0: ID (Không cho sửa)
-            item_id = QTableWidgetItem(str(df.iloc[row]['ID']))
-            item_id.setFlags(item_id.flags() & ~Qt.ItemFlag.ItemIsEditable) # Disable edit
-            self.tableScores.setItem(row, 0, item_id)
-            
-            # Cột 1: Tên (Không cho sửa)
-            item_name = QTableWidgetItem(str(df.iloc[row]['Name']))
-            item_name.setFlags(item_name.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.tableScores.setItem(row, 1, item_name)
-            
-            # Cột 2, 3, 4: Điểm (Cho phép sửa bình thường)
-            self.tableScores.setItem(row, 2, QTableWidgetItem(str(df.iloc[row]['15m'])))
-            self.tableScores.setItem(row, 3, QTableWidgetItem(str(df.iloc[row]['45m'])))
-            self.tableScores.setItem(row, 4, QTableWidgetItem(str(df.iloc[row]['Final'])))
-            
-            # Cột 5: Điểm TB (Không cho sửa)
-            self.tableScores.setItem(row, 5, QTableWidgetItem(str(df.iloc[row]['Average'])))
-            
-        self.draw_chart(df)
+        total_cols = 2 + len(columns_info)
+        self.tableScores.setColumnCount(total_cols)
 
-    # Hàm lưu điểm
+        headers = ["ID", "Họ Tên"]
+        self.column_map = {}
+
+        for idx, col in enumerate(columns_info):
+            headers.append(f"{col['name']} ({col['weight']})")
+            self.column_map[idx + 2] = col["id"]
+
+        self.tableScores.setHorizontalHeaderLabels(headers)
+        self.tableScores.hideColumn(0)
+        self.tableScores.setRowCount(len(rows_info))
+
+        for r, row in enumerate(rows_info):
+            enrollment_item = QTableWidgetItem(str(row["enrollment_id"]))
+            enrollment_item.setFlags(enrollment_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.tableScores.setItem(r, 0, enrollment_item)
+
+            name_item = QTableWidgetItem(row["full_name"])
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.tableScores.setItem(r, 1, name_item)
+
+            scores = row["scores"]
+
+        for c in range(2, total_cols):
+            category_id = self.column_map[c]
+            value = scores.get(category_id, "")
+            self.tableScores.setItem(r, c, QTableWidgetItem(str(value)))
+
     def save_scores_data(self):
-        """ Quét dữ liệu trên bảng và lưu vào DB """
-        data_to_save = []
-        rows = self.tableScores.rowCount()
-        
-        for row in range(rows):
-            s_id = self.tableScores.item(row, 0).text()
-            
-            # Lấy điểm, nếu user xóa trắng thì coi là 0
+        updates = []
+
+        for r in range(self.tableScores.rowCount()):
             try:
-                sc_15 = float(self.tableScores.item(row, 2).text())
-            except: sc_15 = 0.0
-            
+                enrollment_id = int(self.tableScores.item(r, 0).text())
+            except:
+                continue
+
+        for c in range(2, self.tableScores.columnCount()):
+            item = self.tableScores.item(r, c)
+            if not item or not item.text().strip():
+                 continue
+
             try:
-                sc_45 = float(self.tableScores.item(row, 3).text())
-            except: sc_45 = 0.0
-                
-            try:
-                sc_final = float(self.tableScores.item(row, 4).text())
-            except: sc_final = 0.0
-            
-            data_to_save.append((s_id, sc_15, sc_45, sc_final))
-            
-        if save_score_list(data_to_save):
-            QMessageBox.information(self, "Thành công", "Đã lưu bảng điểm!")
-            self.load_score_table() # Load lại để Pandas tính lại điểm TB mới nhất
+                updates.append({
+                    "enrollment_id": enrollment_id,
+                    "category_id": self.column_map[c],
+                    "value": float(item.text())
+                })
+            except ValueError:
+                QMessageBox.warning(
+                    self, "Lỗi",
+                    f"Dòng {r+1} cột {c+1} nhập sai định dạng!"
+                )
+                return
+
+        if not updates:
+            QMessageBox.information(self, "Thông tin", "Không có dữ liệu để lưu!")
+            return
+
+        response = api_client.client.save_grades(updates)
+        if response.success:
+            QMessageBox.information(self, "Thành công", response.data["message"])
+            self.load_scores_table()
         else:
-            QMessageBox.critical(self, "Lỗi", "Lưu thất bại.")
+            QMessageBox.critical(self, "Lỗi", response.message)
 
     # Hàm lấy thông tin học sinh được chọn
     def get_selected_student_infor(self):
